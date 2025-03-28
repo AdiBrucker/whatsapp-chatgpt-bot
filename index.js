@@ -49,7 +49,7 @@ app.post('/webhook', async (req, res) => {
     const context = convo.messages.slice(-10); // last 10 messages only
 
     const openaiRes = await axios.post('https://api.openai.com/v1/chat/completions', {
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4',
       messages: [
         { role: 'system', content: 'אתה קאוצ׳ר אישי שמתמחה בתזונה, בריאות וכושר, ונותן תשובות מעודדות, מועילות ומבוססות.' },
         ...context
