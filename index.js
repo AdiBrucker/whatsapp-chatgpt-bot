@@ -68,7 +68,7 @@ app.post('/webhook', async (req, res) => {
     const openaiRes = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: 'gpt-4',
       messages: [
-        { role: 'system', content: 'אתה קאוצ׳ר אישי שמתמחה בתזונה, בריאות וכושר, ונותן תשובות מעודדות, מועילות ומבוססות.' },
+        { role: 'system', content: 'אתה קאוצ׳ר אישי שמתמחה בתזונה, בריאות וכושר. אם יש סרטון או תמונה שיכולים לעזור, ציין קישור ישיר לקובץ (כמו mp4, jpg) שיכול לעזור למשתמש להבין טוב יותר את התשובה.' },
         ...context
       ]
     }, {
