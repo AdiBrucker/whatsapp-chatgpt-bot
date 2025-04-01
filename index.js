@@ -82,19 +82,20 @@ app.post('/webhook', async (req, res) => {
     convo.messages.push({ role: 'assistant', content: reply });
     await convo.save();
 
+    // Always send the full reply first
+    await client.messages.create({
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: from,
+      body: reply
+    });
+
+    // Then, if a media file is included, send it separately
     const mediaUrl = extractMediaUrl(reply);
     if (mediaUrl) {
       await client.messages.create({
         from: process.env.TWILIO_PHONE_NUMBER,
         to: from,
-        body: 'הנה הסרטון או התמונה שביקשת 🎥🖼️',
         mediaUrl: [mediaUrl]
-      });
-    } else {
-      await client.messages.create({
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: from,
-        body: reply
       });
     }
 
