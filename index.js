@@ -9,10 +9,8 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
 // MongoDB connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log("✅ Connected to MongoDB"))
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ Connected to MongoDB"))
   .catch(err => console.error("❌ MongoDB connection error:", err));
 
 // Define Conversation schema
@@ -31,22 +29,41 @@ const Conversation = mongoose.model('Conversation', conversationSchema);
 
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
+function extractMediaUrl(text) {
+  const urlRegex = /(https?:\/\/[\w\-._~:/?#\[\]@!$&'()*+,;=]+\.(mp4|mov|jpg|jpeg|png|gif))/gi;
+  const match = text.match(urlRegex);
+  return match ? match[0] : null;
+}
+
 app.post('/webhook', async (req, res) => {
   const incomingMsg = req.body.Body;
   const from = req.body.From;
+  const numMedia = parseInt(req.body.NumMedia);
 
   console.log(`Received from ${from}: ${incomingMsg}`);
 
   try {
+    if (numMedia > 0) {
+      const mediaUrl = req.body.MediaUrl0;
+      const mediaType = req.body.MediaContentType0;
+      console.log(`📷 Received media: ${mediaUrl} (${mediaType})`);
+
+      await client.messages.create({
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: from,
+        body: `קיבלתי את הקובץ שלך (${mediaType})! תודה 😊`
+      });
+
+      return res.sendStatus(200);
+    }
+
     let convo = await Conversation.findOne({ user: from });
     if (!convo) {
       convo = new Conversation({ user: from, messages: [] });
     }
 
-    // Add user's message to conversation
     convo.messages.push({ role: 'user', content: incomingMsg });
-
-    const context = convo.messages.slice(-10); // last 10 messages only
+    const context = convo.messages.slice(-10);
 
     const openaiRes = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: 'gpt-4',
@@ -62,16 +79,24 @@ app.post('/webhook', async (req, res) => {
     });
 
     const reply = openaiRes.data.choices[0].message.content;
-
-    // Add assistant's reply to conversation
     convo.messages.push({ role: 'assistant', content: reply });
     await convo.save();
 
-    await client.messages.create({
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: from,
-      body: reply
-    });
+    const mediaUrl = extractMediaUrl(reply);
+    if (mediaUrl) {
+      await client.messages.create({
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: from,
+        body: 'הנה הסרטון או התמונה שביקשת 🎥🖼️',
+        mediaUrl: [mediaUrl]
+      });
+    } else {
+      await client.messages.create({
+        from: process.env.TWILIO_PHONE_NUMBER,
+        to: from,
+        body: reply
+      });
+    }
 
     res.sendStatus(200);
   } catch (err) {
