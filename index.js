@@ -79,6 +79,8 @@ app.post('/webhook', async (req, res) => {
     });
 
     const reply = openaiRes.data.choices[0].message.content;
+    console.log("🔁 Model used:", openaiRes.data.model);
+
     convo.messages.push({ role: 'assistant', content: reply });
     await convo.save();
 
