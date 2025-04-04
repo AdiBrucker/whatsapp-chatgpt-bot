@@ -68,7 +68,7 @@ app.post('/webhook', async (req, res) => {
     const openaiRes = await axios.post('https://api.openai.com/v1/chat/completions', {
       model: 'gpt-4',
       messages: [
-        { role: 'system', content: 'אתה קאוצ׳ר אישי שמתמחה בתזונה, בריאות וכושר. אם יש סרטון או תמונה שיכולים לעזור, ציין קישור ישיר לקובץ (כמו mp4, jpg) שיכול לעזור למשתמש להבין טוב יותר את התשובה.' },
+        { role: 'system', content: 'אתה קאוצ׳ר אישי שמתמחה בתזונה, בריאות וכושר. אם יש סרטון או תמונה שיכולים לעזור מאוד באופן מדויק, ציין קישור ישיר לקובץ (כמו mp4, jpg). אם אין התאמה מדויקת ומועילה, אל תוסיף קישור בכלל.' },
         ...context
       ]
     }, {
@@ -79,8 +79,6 @@ app.post('/webhook', async (req, res) => {
     });
 
     const reply = openaiRes.data.choices[0].message.content;
-    console.log("🔁 Model used:", openaiRes.data.model);
-
     convo.messages.push({ role: 'assistant', content: reply });
     await convo.save();
 
@@ -91,9 +89,9 @@ app.post('/webhook', async (req, res) => {
       body: reply
     });
 
-    // Then, if a media file is included, send it separately
+    // Then, if a media file is included and clearly relevant, send it separately
     const mediaUrl = extractMediaUrl(reply);
-    if (mediaUrl) {
+    if (mediaUrl && reply.toLowerCase().includes(mediaUrl.toLowerCase())) {
       await client.messages.create({
         from: process.env.TWILIO_PHONE_NUMBER,
         to: from,
